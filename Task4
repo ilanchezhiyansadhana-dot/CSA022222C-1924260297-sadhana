@@ -1,1 +1,118 @@
-Task4
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+
+#define DISTRICTS 38
+#define MONTHS 12
+
+void compute_district_totals(const double rain[][MONTHS], int r, int c, double totals[])
+{
+    for (int i = 0; i < r; i++) {
+        double sum = 0.0;
+        for (int j = 0; j < c; j++) {
+            sum += rain[i][j];
+        }
+        totals[i] = sum;
+    }
+}
+
+double compute_state_monthly_avg(const double rain[][MONTHS], int r, int c)
+{
+    double total = 0.0;
+    for (int i = 0; i < r; i++) {
+        for (int j = 0; j < c; j++) {
+            total += rain[i][j];
+        }
+    }
+    return total / (double)(r * c);
+}
+
+void find_wettest_cell(const double rain[][MONTHS], int r, int c,
+                       int *best_d, int *best_m, double *max_val)
+{
+    *max_val = rain[0][0];
+    *best_d = 0;
+    *best_m = 0;
+    for (int i = 0; i < r; i++) {
+        for (int j = 0; j < c; j++) {
+            if (rain[i][j] > *max_val) {
+                *max_val = rain[i][j];
+                *best_d = i;
+                *best_m = j;
+            }
+        }
+    }
+}
+
+void print_deficient_districts(const double totals[], int r, double state_monthly_avg)
+{
+    /* Compare each district's monthly average (total / 12) against 0.60 * state_monthly_avg */
+    double threshold = 0.60 * state_monthly_avg;
+    printf("Deficient districts (monthly avg < %.2f mm):\n", threshold);
+    for (int i = 0; i < r; i++) {
+        double d_avg = totals[i] / MONTHS;
+        if (d_avg < threshold) {
+            printf("  District %2d: monthly avg = %.2f mm (annual = %.2f mm)\n",
+                   i + 1, d_avg, totals[i]);
+        }
+    }
+}
+
+static void benchmark_2000x2000(void)
+{
+    const int N = 2000;
+    double *mat = malloc((size_t)N * (size_t)N * sizeof(double));
+    for (int i = 0; i < N * N; i++) mat[i] = (double)(i % 100) * 0.5;
+
+    volatile double sink = 0.0;
+    clock_t t0 = clock();
+    double sum_row = 0.0;
+    for (int i = 0; i < N; i++) {
+        for (int j = 0; j < N; j++) {
+            sum_row += mat[(size_t)i * N + j];
+        }
+    }
+    clock_t t1 = clock();
+
+    double sum_col = 0.0;
+    for (int j = 0; j < N; j++) {
+        for (int i = 0; i < N; i++) {
+            sum_col += mat[(size_t)i * N + j];
+        }
+    }
+    clock_t t2 = clock();
+
+    sink = sum_row + sum_col;
+    (void)sink;
+
+    printf("\n2000x2000 Row-wise time : %.4f s\n", (double)(t1 - t0) / CLOCKS_PER_SEC);
+    printf("2000x2000 Col-wise time : %.4f s\n", (double)(t2 - t1) / CLOCKS_PER_SEC);
+    free(mat);
+}
+
+int main(void)
+{
+    double rain[DISTRICTS][MONTHS];
+    for (int i = 0; i < DISTRICTS; i++) {
+        for (int j = 0; j < MONTHS; j++) {
+            rain[i][j] = ((i == 4 && j == 6) ? 420.5 : (double)((i * 13 + j * 17) % 140 + 20));
+        }
+    }
+    /* Make District 10 deficient */
+    for (int j = 0; j < MONTHS; j++) rain[9][j] = 10.0;
+
+    double totals[DISTRICTS];
+    int best_d = 0, best_m = 0;
+    double max_val = 0.0;
+
+    compute_district_totals(rain, DISTRICTS, MONTHS, totals);
+    double state_avg = compute_state_monthly_avg(rain, DISTRICTS, MONTHS);
+    find_wettest_cell(rain, DISTRICTS, MONTHS, &best_d, &best_m, &max_val);
+
+    printf("State monthly average rainfall: %.2f mm\n", state_avg);
+    printf("Wettest record: District %d, Month %d with %.2f mm\n", best_d + 1, best_m + 1, max_val);
+    print_deficient_districts(totals, DISTRICTS, state_avg);
+
+    benchmark_2000x2000();
+    return 0;
+}
