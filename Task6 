@@ -1,1 +1,119 @@
-Task6
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define MAX_NAMES 5000
+#define NAME_LEN 30
+
+static void strip_newline(char *s)
+{
+    size_t len = strlen(s);
+    if (len > 0 && s[len - 1] == '\n') {
+        s[len - 1] = '\0';
+    }
+}
+
+/* Sort by copying strings directly */
+void sort_copy(char names[][NAME_LEN], int n, long long *cmps, long long *char_copies)
+{
+    *cmps = 0;
+    *char_copies = 0;
+    char temp[NAME_LEN];
+
+    for (int i = 0; i < n - 1; i++) {
+        for (int j = 0; j < n - 1 - i; j++) {
+            (*cmps)++;
+            if (strcmp(names[j], names[j + 1]) > 0) {
+                strcpy(temp, names[j]);
+                *char_copies += (long long)strlen(temp) + 1;
+                strcpy(names[j], names[j + 1]);
+                *char_copies += (long long)strlen(names[j + 1]) + 1;
+                strcpy(names[j + 1], temp);
+                *char_copies += (long long)strlen(temp) + 1;
+            }
+        }
+    }
+}
+
+/* Sort by swapping integer indices only */
+void sort_indices(char names[][NAME_LEN], int idx[], int n, long long *cmps, long long *idx_swaps)
+{
+    *cmps = 0;
+    *idx_swaps = 0;
+    for (int i = 0; i < n; i++) idx[i] = i;
+
+    for (int i = 0; i < n - 1; i++) {
+        for (int j = 0; j < n - 1 - i; j++) {
+            (*cmps)++;
+            if (strcmp(names[idx[j]], names[idx[j + 1]]) > 0) {
+                int t = idx[j];
+                idx[j] = idx[j + 1];
+                idx[j + 1] = t;
+                (*idx_swaps)++;
+            }
+        }
+    }
+}
+
+int binary_search_idx(char names[][NAME_LEN], const int idx[], int n, const char *target, long long *cmps)
+{
+    int lo = 0, hi = n - 1;
+    *cmps = 0;
+    while (lo <= hi) {
+        int mid = lo + (hi - lo) / 2;
+        (*cmps)++;
+        int c = strcmp(names[idx[mid]], target);
+        if (c == 0) return mid;
+        else if (c < 0) lo = mid + 1;
+        else hi = mid - 1;
+    }
+    return -1;
+}
+
+void print_duplicates_idx(char names[][NAME_LEN], const int idx[], int n)
+{
+    printf("Duplicates:\n");
+    int found = 0;
+    for (int i = 1; i < n; i++) {
+        if (strcmp(names[idx[i - 1]], names[idx[i]]) == 0) {
+            if (i == 1 || strcmp(names[idx[i - 2]], names[idx[i]]) != 0) {
+                printf("  %s\n", names[idx[i]]);
+                found = 1;
+            }
+        }
+    }
+    if (!found) printf("  None\n");
+}
+
+int main(void)
+{
+    /* Demonstration with sample hostel residents */
+    char sample[][NAME_LEN] = {
+        "Arjun", "Priya", "Arjun", "Zoya", "Karan", "Priya"
+    };
+    int n = 6;
+    int idx[6];
+    long long cmps = 0, swaps = 0, search_cmps = 0;
+
+    sort_indices(sample, idx, n, &cmps, &swaps);
+    printf("Sorted directory (via index array):\n");
+    for (int i = 0; i < n; i++) {
+        printf("  %d: %s\n", i, sample[idx[i]]);
+    }
+    printf("strcmp calls = %lld, index swaps = %lld\n", cmps, swaps);
+
+    int pos = binary_search_idx(sample, idx, n, "Priya", &search_cmps);
+    printf("Search 'Priya' -> pos %d (%lld strcmp calls)\n", pos, search_cmps);
+
+    pos = binary_search_idx(sample, idx, n, "Meera", &search_cmps);
+    printf("Search 'Meera' -> pos %d (%lld strcmp calls)\n", pos, search_cmps);
+
+    print_duplicates_idx(sample, idx, n);
+
+    /* Example safe input line using fgets + strip_newline */
+    char buf[NAME_LEN];
+    (void)strip_newline;
+    (void)sort_copy;
+    (void)buf;
+    return 0;
+}
